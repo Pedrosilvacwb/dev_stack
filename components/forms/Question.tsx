@@ -20,7 +20,7 @@ import { z } from "zod";
 import { Badge } from "../ui/badge";
 import Image from "next/image";
 import { createQuestion } from "@/lib/actions/question.action";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface QuestionProps {
   userId: string;
@@ -38,7 +38,7 @@ const Question = ({ userId }: QuestionProps) => {
     },
   });
   const router = useRouter();
-  const pathname = usePathname();
+
   async function onSubmit(values: z.infer<typeof QuestionsSchema>) {
     setIsSubmiting(true);
 
