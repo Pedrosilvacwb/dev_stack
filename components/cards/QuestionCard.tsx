@@ -3,19 +3,23 @@ import React from "react";
 import RenderTag from "../shared/RenderTag";
 import Metric from "../shared/Metric";
 import { formatAndDivideNumber, getTimestamp } from "@/lib/utils";
+import { SignedIn } from "@clerk/nextjs";
+import EditDeleteAction from "../shared/EditDeleteAction";
 
 interface QuestionCardProps {
   id: string;
   title: string;
   tags: { id: string; name: string }[];
-  author: { id: string; name: string; picture: string };
-  upVotes: number;
+  author: { id: string; name: string; picture: string; clerkId: string };
+  upVotes: string[];
   answers: number;
   views: number;
   createdAt: Date;
+  clerkId?: string | null;
 }
 
 const QuestionCard = ({
+  clerkId,
   answers,
   createdAt,
   author,
@@ -25,6 +29,8 @@ const QuestionCard = ({
   upVotes,
   views,
 }: QuestionCardProps) => {
+  const showActionButtons = clerkId && clerkId === author.clerkId;
+
   return (
     <div className="card-wrapper rounded-[10px] p-9 sm:px-11">
       <div className="flex flex-col-reverse items-start justify-between gap-5 sm:flex-row">
@@ -36,6 +42,12 @@ const QuestionCard = ({
             {title}
           </h3>
         </Link>
+
+        <SignedIn>
+          {showActionButtons && (
+            <EditDeleteAction type="Question" id={JSON.stringify(id)} />
+          )}
+        </SignedIn>
       </div>
 
       <div className="mt-3.5 flex flex-wrap gap-2">
@@ -54,27 +66,29 @@ const QuestionCard = ({
           isAuthor
           value={author.name}
         />
-        <Metric
-          alt="Upvotes"
-          className="small-medium text-dark400_light800"
-          imgUrl="/assets/icons/like.svg"
-          title=" Votes"
-          value={formatAndDivideNumber(upVotes)}
-        />
-        <Metric
-          alt="messages"
-          className="small-medium text-dark400_light800"
-          imgUrl="/assets/icons/message.svg"
-          title=" Answers"
-          value={formatAndDivideNumber(answers)}
-        />
-        <Metric
-          alt="Views"
-          className="small-medium text-dark400_light800"
-          imgUrl="/assets/icons/eye.svg"
-          title=" Views"
-          value={formatAndDivideNumber(views)}
-        />
+        <div className="flex items-center gap-3 max-sm:flex-wrap max-sm:justify-start">
+          <Metric
+            alt="Upvotes"
+            className="small-medium text-dark400_light800"
+            imgUrl="/assets/icons/like.svg"
+            title=" Votes"
+            value={formatAndDivideNumber(upVotes?.length)}
+          />
+          <Metric
+            alt="messages"
+            className="small-medium text-dark400_light800"
+            imgUrl="/assets/icons/message.svg"
+            title=" Answers"
+            value={formatAndDivideNumber(answers)}
+          />
+          <Metric
+            alt="Views"
+            className="small-medium text-dark400_light800"
+            imgUrl="/assets/icons/eye.svg"
+            title=" Views"
+            value={formatAndDivideNumber(views)}
+          />
+        </div>
       </div>
     </div>
   );

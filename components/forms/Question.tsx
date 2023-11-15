@@ -19,40 +19,62 @@ import { QuestionsSchema } from "@/lib/validations";
 import { z } from "zod";
 import { Badge } from "../ui/badge";
 import Image from "next/image";
-import { createQuestion } from "@/lib/actions/question.action";
-import { useRouter } from "next/navigation";
+import { createQuestion, editQuestion } from "@/lib/actions/question.action";
+import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "@/hooks/useTheme";
 
 interface QuestionProps {
+  type?: "edit" | "create";
   userId: string;
+  questionDetails?: string;
 }
-const Question = ({ userId }: QuestionProps) => {
-  const type: "edit" | "create" = "create";
-  const [isSubmiting, setIsSubmiting] = useState<Boolean>(false);
+const Question = ({ userId, questionDetails, type }: QuestionProps) => {
+  const { mode } = useTheme();
+  const [isSubmiting, setIsSubmiting] = useState<boolean>(false);
   const editorRef = useRef(null);
+
+  const parsedQuestionDetails =
+    questionDetails && JSON.parse(questionDetails || "");
+
+  const groupedTags = parsedQuestionDetails?.tags.map((tag: any) => tag.name);
   const form = useForm<z.infer<typeof QuestionsSchema>>({
     resolver: zodResolver(QuestionsSchema),
     defaultValues: {
-      title: "",
+      title: parsedQuestionDetails?.title || "",
       explanation: "",
-      tags: [],
+      tags: groupedTags || [],
     },
   });
   const router = useRouter();
+  const pathname = usePathname();
 
   async function onSubmit(values: z.infer<typeof QuestionsSchema>) {
     setIsSubmiting(true);
 
     try {
-      await createQuestion({
-        title: values.title,
-        content: values.explanation,
-        tags: values.tags,
-        author: JSON.parse(userId),
-        path: "/",
-      });
+      if (type === "edit") {
+        await editQuestion({
+          questionId: parsedQuestionDetails._id,
+          title: values.title,
+          content: values.explanation,
+          path: pathname,
+        });
+        router.push(`/question/${parsedQuestionDetails._id}`);
+      } else {
+        await createQuestion({
+          title: values.title,
+          content: values.explanation,
+          tags: values.tags,
+          author: JSON.parse(userId),
+          path: "/",
+        });
 
-      router.push("/");
-    } catch (error) {}
+        router.push("/");
+      }
+    } catch (error) {
+    } finally {
+      setIsSubmiting(false);
+    }
   }
 
   const onInputKeyDown = (
@@ -133,7 +155,7 @@ const Question = ({ userId }: QuestionProps) => {
                     // @ts-ignore
                     (editorRef.current = editor)
                   }
-                  initialValue=""
+                  initialValue={parsedQuestionDetails?.content || ""}
                   init={{
                     height: 350,
                     menubar: false,
@@ -160,6 +182,8 @@ const Question = ({ userId }: QuestionProps) => {
                       "alignright alignjustify | bullist numlist | ",
 
                     content_style: "body { font-family:Inter; font-size:16px }",
+                    skin: mode === "dark" ? "oxide-dark" : "oxide",
+                    content_css: mode === "dark" ? "dark" : "light",
                   }}
                 />
               </FormControl>
@@ -185,6 +209,7 @@ const Question = ({ userId }: QuestionProps) => {
                     className="no-focus paragraph-regular background-light900_dark300 light-border-2 text-dark300_light700 min-h-[56px] border"
                     onKeyDown={(e) => onInputKeyDown(e, field)}
                     placeholder="Add tags..."
+                    disabled={type === "edit"}
                   />
 
                   {field.value.length > 0 && (
@@ -195,14 +220,16 @@ const Question = ({ userId }: QuestionProps) => {
                           className="subtle-medium background-light800_dark300 text-light400_light500 flex items-center justify-center gap-2 rounded-md border-none px-4 py-2 capitalize"
                         >
                           {item}
-                          <Image
-                            onClick={(E) => handleRemoveTag(item, field)}
-                            src="/assets/icons/close.svg"
-                            alt="close icon"
-                            width={12}
-                            height={12}
-                            className="cursor-pointer object-contain invert-0 dark:invert"
-                          />
+                          {type !== "edit" && (
+                            <Image
+                              onClick={(E) => handleRemoveTag(item, field)}
+                              src="/assets/icons/close.svg"
+                              alt="close icon"
+                              width={12}
+                              height={12}
+                              className="cursor-pointer object-contain invert-0 dark:invert"
+                            />
+                          )}
                         </Badge>
                       ))}
                     </div>
@@ -221,12 +248,12 @@ const Question = ({ userId }: QuestionProps) => {
         <Button
           type="submit"
           className="primary-gradient w-fit !text-light-900"
-          disabled={isSubmiting as boolean}
+          disabled={isSubmiting}
         >
           {isSubmiting ? (
-            <>{type === "create" ? "Posting..." : "Editing..."}</>
+            <>{type === "edit" ? "Editing..." : "Posting..."}</>
           ) : (
-            <>{type === "create" ? "Ask a Question" : "Edit your Question"}</>
+            <>{type === "edit" ? "Edit Question" : "Ask a Question"}</>
           )}
         </Button>
       </form>
